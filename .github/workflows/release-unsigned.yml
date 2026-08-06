@@ -17,6 +17,12 @@ on:
   push:
     tags:
       - "ug-v*"
+  # Fork consent gate: GitHub does not deliver push-event runs on a fork
+  # until "Enable workflows" is clicked in the Actions UI (API cannot do
+  # it — proven 2026-08-06: zero push runs ever, dispatch runs fine).
+  # workflow_dispatch AT THE TAG REF (gh workflow run --ref refs/tags/...)
+  # is the equivalent path: GITHUB_REF_NAME resolves to the tag either way.
+  workflow_dispatch:
 
 permissions:
   contents: read
