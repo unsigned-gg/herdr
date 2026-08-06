@@ -42,7 +42,7 @@ jobs:
             name: herdr-linux-x86_64
           - target: aarch64-unknown-linux-musl
             name: herdr-linux-aarch64
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # explicit label: org runner-group override of ubuntu-latest never acquires on this fork
     env:
       LIBGHOSTTY_VT_OPTIMIZE: ReleaseFast
       LIBGHOSTTY_VT_SIMD: 'true'
@@ -110,7 +110,7 @@ jobs:
 
   release:
     needs: [build]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # explicit label: org runner-group override of ubuntu-latest never acquires on this fork
     permissions:
       contents: write
     steps:
