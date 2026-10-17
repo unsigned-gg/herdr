@@ -1,0 +1,18 @@
+# Herdr Multiplexer Lane (unsigned-gg/herdr — pollux, estate/w4A:p1)
+# Overlay on the saga catalog for the Herdr runtime and workstation sensing lane.
+[teams.herdr-solo]
+topology = "herdr-solo"
+members = [
+  { slot = 0, role = "pollux", harness = "agy", effort = "high" },
+]
+
+[teams.herdr-gang]
+topology = "herdr-cockpit"
+members = [
+  { slot = 0, role = "pollux", harness = "agy", effort = "high" },
+  { slot = 1, role = "sindri", effort = "medium" },
+  { slot = 2, role = "sindri", effort = "medium" },
+  { slot = 3, role = "sindri", effort = "medium" },
+  { slot = 4, role = "mimir", effort = "high" },
+  { slot = 5, role = "loki", effort = "high" },
+]

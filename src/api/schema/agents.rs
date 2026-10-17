@@ -235,3 +235,63 @@ pub struct AgentSessionInfo {
     pub kind: crate::agent_resume::AgentSessionRefKind,
     pub value: String,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::agent_resume::AgentSessionRefKind;
+
+    #[test]
+    fn s4_agent_list_envelope_preserves_cortex_edge_and_revenant_fields() {
+        let info = AgentInfo {
+            terminal_id: "t1".into(),
+            name: Some("pollux".into()),
+            agent: Some("agy".into()),
+            title: None,
+            terminal_title: None,
+            terminal_title_stripped: None,
+            display_agent: Some("Antigravity".into()),
+            agent_status: AgentStatus::Working,
+            screen_detection_skipped: false,
+            state_labels: HashMap::new(),
+            tokens: HashMap::new(),
+            agent_session: Some(AgentSessionInfo {
+                source: "hook".into(),
+                agent: "agy".into(),
+                kind: AgentSessionRefKind::Id,
+                value: "02004e7d-5961-4ad0-8e98-451278826314".into(),
+            }),
+            workspace_id: "w4A".into(),
+            tab_id: "t1".into(),
+            pane_id: "w4A:p1".into(),
+            focused: true,
+            launch_pending: false,
+            interactive_ready: true,
+            state_change_seq: 1,
+            completion_seq: None,
+            cwd: Some("/home/ctodie/projects/agents/harness/herdr".into()),
+            foreground_cwd: Some("/home/ctodie/projects/agents/harness/herdr".into()),
+            revision: 7,
+        };
+
+        let envelope = serde_json::json!({
+            "id": "req-s4",
+            "result": {
+                "agents": [info]
+            }
+        });
+
+        let row = &envelope["result"]["agents"][0];
+        assert_eq!(row["pane_id"].as_str(), Some("w4A:p1"));
+        assert_eq!(row["agent"].as_str(), Some("agy"));
+        assert_eq!(row["agent_status"].as_str(), Some("working"));
+        assert_eq!(
+            row["cwd"].as_str(),
+            Some("/home/ctodie/projects/agents/harness/herdr")
+        );
+        assert_eq!(
+            row["agent_session"]["value"].as_str(),
+            Some("02004e7d-5961-4ad0-8e98-451278826314")
+        );
+    }
+}
