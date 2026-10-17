@@ -1,0 +1,26 @@
+# Herdr lane topologies (unsigned-gg/herdr — estate/w4A:p1)
+[topologies.herdr-solo]
+slots = [
+  { role = "pollux", label = "lead" },
+  { role = "shell", label = "shell" },
+]
+splits = [
+  { from = 0, direction = "right", ratio = 0.5, new = 1 },
+]
+
+[topologies.herdr-cockpit]
+slots = [
+  { role = "pollux", label = "lead" },
+  { role = "sindri", label = "worker-top" },
+  { role = "sindri", label = "worker-mid" },
+  { role = "sindri", label = "worker-bottom" },
+  { role = "mimir", label = "architect" },
+  { role = "loki", label = "critic" },
+]
+splits = [
+  { from = 0, direction = "right", ratio = 0.3333333333333333, new = 1 },
+  { from = 1, direction = "right", ratio = 0.5, new = 4 },
+  { from = 1, direction = "down", ratio = 0.3333333333333333, new = 2 },
+  { from = 2, direction = "down", ratio = 0.5, new = 3 },
+  { from = 4, direction = "down", ratio = 0.5, new = 5 },
+]

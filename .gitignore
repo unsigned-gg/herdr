@@ -26,3 +26,9 @@ __pycache__/
 
 /.wrangler/
 **/.wrangler/
+
+# Blackwall custody store
+.blackwall/
+
+# Lane persona (lane-persona, ephemeral)
+.agents/persona.md

@@ -818,6 +818,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "herdr-domain"
+version = "0.9.3"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"

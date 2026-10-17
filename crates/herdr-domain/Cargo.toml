@@ -1,0 +1,14 @@
+[package]
+name = "herdr-domain"
+version = "0.9.3"
+edition = "2021"
+license = "Apache-2.0"
+description = "Zero-I/O domain types and pane protection invariants for herdr"
+publish = false
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+
+[dev-dependencies]
+serde_json = "1"
+
