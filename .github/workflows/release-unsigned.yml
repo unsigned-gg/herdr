@@ -103,11 +103,28 @@ jobs:
       - name: Rename binary
         run: cp target/${{ matrix.target }}/release/herdr ${{ matrix.name }}
 
+      # Musl-named archive next to the bare binary (OPS-1744 M2). The bare
+      # herdr-linux-* names stay: the Homebrew formula and existing mise pins
+      # use them. mise's ubi backend does not filter by libc on a glibc host
+      # and takes the first candidate by name, so herdr-linux-* must keep
+      # sorting before herdr-ug-v*. The checksum is <archive>.sha256 because
+      # ubi skips that unknown extension; an extensionless SHA256SUMS-<triple>
+      # would match OS and arch and sort first.
+      - name: Package musl-named archive
+        run: |
+          ARCHIVE="herdr-${GITHUB_REF_NAME}-${{ matrix.target }}.tar.gz"
+          install -D -m 0755 target/${{ matrix.target }}/release/herdr pkg/herdr
+          tar -C pkg -czf "$ARCHIVE" herdr
+          sha256sum "$ARCHIVE" > "$ARCHIVE.sha256"
+
       - name: Upload artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: ${{ matrix.name }}
-          path: ${{ matrix.name }}
+          path: |
+            ${{ matrix.name }}
+            herdr-${{ github.ref_name }}-${{ matrix.target }}.tar.gz
+            herdr-${{ github.ref_name }}-${{ matrix.target }}.tar.gz.sha256
 
   release:
     needs: [build]
@@ -127,6 +144,9 @@ jobs:
             In-house distribution build of herdr for the unsigned estate.
             Base: upstream ${{ github.ref_name }} (see tag base version).
             Not an upstream release — upstream is https://github.com/herdrdev/herdr.
+          fail_on_unmatched_files: true
           files: |
             herdr-linux-x86_64/herdr-linux-x86_64
             herdr-linux-aarch64/herdr-linux-aarch64
+            herdr-linux-*/herdr-ug-v*.tar.gz
+            herdr-linux-*/herdr-ug-v*.tar.gz.sha256
