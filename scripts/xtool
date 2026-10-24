@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# scripts/xtool — Unified Revenant developer & CI workflow entrypoint.
+# Delegates to `cargo xtask` with mandatory `-j 2` host throttling and Glaeda
+# RAM-disk (`cortex-memfs`) hot-state acceleration.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+export JOBS="${JOBS:-2}"
+export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-$JOBS}"
+
+cmd="${1:-xwork}"
+if [[ $# -gt 0 ]]; then
+    shift
+fi
+
+exec cargo xtask "$cmd" "$@"

@@ -1,0 +1,24 @@
+[package]
+name = "classifier"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+description = "Vendored System 1 classifier engine: TypeSafe AI Jev, Cloudflare Clef, Ref fast reflex gate, and ambient claims attestation."
+publish = false
+
+[workspace]
+
+[dependencies]
+tokio = { version = "1", features = ["sync", "time", "macros", "rt"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+anyhow = "1"
+tracing = "0.1"
+chrono = { version = "0.4", features = ["serde"] }
+sha2 = "0.10"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
