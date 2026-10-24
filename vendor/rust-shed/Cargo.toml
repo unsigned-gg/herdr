@@ -1,0 +1,221 @@
+[package]
+name = "rust-shed"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+description = "Curated foundational Rust battery pack and ergonomics extensions for estate services (modeled on facebookexperimental/rust-shed)."
+publish = false
+
+[package.metadata.cargo-machete]
+ignored = [
+    "anyhow",
+    "async-trait",
+    "axum",
+    "base64",
+    "chrono",
+    "clap",
+    "eyre",
+    "figment",
+    "futures",
+    "http-body-util",
+    "jsonwebtoken",
+    "opentelemetry-proto",
+    "parking_lot",
+    "pin-project",
+    "prometheus",
+    "proptest",
+    "prost",
+    "reqwest",
+    "rustls",
+    "serde",
+    "serde_json",
+    "sqlx",
+    "tempfile",
+    "thiserror",
+    "tokio",
+    "toml",
+    "tower",
+    "tracing",
+    "tracing-subscriber",
+]
+
+[features]
+default = ["core", "serde", "time"]
+
+# 1. Core error, diagnostic, and encoding primitives
+core = [
+    "dep:anyhow",
+    "dep:thiserror",
+    "dep:eyre",
+    "dep:base64",
+]
+
+# 2. Serialization & structured configuration formats
+serde = [
+    "dep:serde",
+    "dep:serde_json",
+    "dep:toml",
+]
+
+# 3. Time & duration ergonomics (`time_ext`)
+time = [
+    "dep:chrono",
+]
+
+# 4. Synchronous non-poisoning locks (`lock_ext`)
+sync = [
+    "dep:parking_lot",
+]
+
+# 5. Async runtime, futures combinators (`futures_ext`), and `AsyncOnceCell`
+async = [
+    "dep:tokio",
+    "dep:futures",
+    "dep:async-trait",
+    "dep:pin-project",
+]
+
+# 6. HTTP server, client, and middleware stack
+http = [
+    "async",
+    "serde",
+    "dep:axum",
+    "dep:reqwest",
+    "dep:tower",
+    "dep:http-body-util",
+]
+
+# 7. Pure-Rust TLS (`rustls` ring provider)
+tls = [
+    "dep:rustls",
+]
+
+# 8. Telemetry, structured tracing, Prometheus metrics, and OTLP protobufs
+telemetry = [
+    "dep:tracing",
+    "dep:tracing-subscriber",
+    "dep:prometheus",
+    "dep:opentelemetry-proto",
+    "dep:prost",
+]
+
+# 9. Command-line parsing (`clap` derive + env)
+cli = [
+    "dep:clap",
+]
+
+# 10. Layered configuration loading (`figment` env + toml)
+config = [
+    "serde",
+    "dep:figment",
+]
+
+# 11. JWT & Auth0 verification (`auth0`)
+crypto = [
+    "serde",
+    "dep:jsonwebtoken",
+]
+
+# 12. Relational database (`sqlx` Postgres + SQLite)
+sql = [
+    "async",
+    "time",
+    "dep:sqlx",
+]
+
+# 13. Deterministic property testing and tempfiles
+test-util = [
+    "dep:tempfile",
+    "dep:proptest",
+]
+
+# 14. Auth0 SSO & OIDC validation adapter
+auth0 = [
+    "core",
+    "serde",
+    "time",
+    "async",
+    "http",
+]
+
+# Full battery pack
+full = [
+    "core",
+    "serde",
+    "time",
+    "sync",
+    "async",
+    "http",
+    "tls",
+    "telemetry",
+    "cli",
+    "config",
+    "crypto",
+    "sql",
+    "test-util",
+    "auth0",
+]
+
+[dependencies]
+# Core
+anyhow = { version = "1.0", optional = true }
+thiserror = { version = "2.0", optional = true }
+eyre = { version = "0.6", optional = true }
+base64 = { version = "0.22", optional = true }
+
+# Serde
+serde = { version = "1.0", features = ["derive"], optional = true }
+serde_json = { version = "1.0", optional = true }
+toml = { version = "0.8", optional = true }
+
+# Time
+chrono = { version = "0.4", features = ["serde"], optional = true }
+
+# Sync
+parking_lot = { version = "0.12", optional = true }
+
+# Async
+tokio = { version = "1.43", features = ["rt-multi-thread", "macros", "net", "time", "sync", "signal", "fs", "io-util", "process"], optional = true }
+futures = { version = "0.3", optional = true }
+async-trait = { version = "0.1", optional = true }
+pin-project = { version = "1.1", optional = true }
+
+# HTTP
+axum = { version = "0.8", optional = true }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"], optional = true }
+tower = { version = "0.5", features = ["util"], optional = true }
+http-body-util = { version = "0.1", optional = true }
+
+# TLS
+rustls = { version = "0.23", default-features = false, features = ["ring", "logging", "std", "tls12"], optional = true }
+
+# Telemetry
+tracing = { version = "0.1", optional = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"], optional = true }
+prometheus = { version = "0.13", default-features = false, optional = true }
+opentelemetry-proto = { version = "0.28", default-features = false, features = ["trace", "metrics", "logs", "gen-tonic-messages"], optional = true }
+prost = { version = "0.13", optional = true }
+
+# CLI
+clap = { version = "4.5", features = ["derive", "env"], optional = true }
+
+# Config
+figment = { version = "0.10", features = ["env", "toml"], optional = true }
+
+# Crypto / Auth0
+jsonwebtoken = { version = "9.3", optional = true }
+
+# SQL
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "sqlite", "chrono", "json", "migrate"], optional = true }
+
+# Test utilities
+tempfile = { version = "3.15", optional = true }
+proptest = { version = "1.6", optional = true }
+
+[dev-dependencies]
+tokio = { version = "1.43", features = ["rt-multi-thread", "macros", "time", "sync"] }
+futures = "0.3"
+chrono = { version = "0.4", features = ["serde"] }
+parking_lot = "0.12"
+thiserror = "2.0"

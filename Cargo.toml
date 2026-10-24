@@ -21,10 +21,11 @@ include = [
 ]
 
 [workspace]
-members = ["crates/ghostty-vt"]
+members = ["crates/ghostty-vt", "vendor/rust-shed", "xtask"]
 default-members = [".", "crates/ghostty-vt"]
 
 [dependencies]
+rust-shed = { path = "vendor/rust-shed", default-features = false, features = ["core", "serde", "time", "sync", "async", "cli", "auth0"] }
 ghostty-vt = { path = "crates/ghostty-vt" }
 base64 = "0.22.1"
 bincode = { version = "2", features = ["serde"] }
