@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Christian M. Todie
 
 //! Auth0 SSO & OIDC Middleware Adapter for Estate & Edge Services.

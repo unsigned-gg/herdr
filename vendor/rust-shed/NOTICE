@@ -1,8 +1,11 @@
-rust-shed is licensed under BUSL-1.1 (see LICENSE), except as noted here.
+rust-shed licensing notice
 
-The following files are from facebookexperimental/rust-shed. They carry the
-upstream "Copyright (c) Meta Platforms, Inc. and affiliates" header and keep
-their upstream terms (MIT OR Apache-2.0), not BUSL-1.1:
+The crate as a whole is licensed under the Business Source License 1.1
+(see LICENSE). Licensor: 2die4 Inc. / Christian Todie.
+
+The following files are derived from facebookexperimental/rust-shed.
+They remain under the upstream terms, MIT OR Apache-2.0. Their original
+notices are retained in each file and are not altered:
 
   src/async_once_cell.rs
   src/borrowed.rs
@@ -12,4 +15,7 @@ their upstream terms (MIT OR Apache-2.0), not BUSL-1.1:
   src/shared_error.rs
   src/time_ext.rs
 
-All other files keep the license stated in their own header.
+Copyright (c) Meta Platforms, Inc. and affiliates.
+
+All other files in this crate are first-party and are licensed under
+BUSL-1.1, unless a file header states otherwise.
