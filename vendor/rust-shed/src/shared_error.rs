@@ -15,13 +15,17 @@ pub struct SharedError<T: StdError + 'static> {
 
 impl<T: StdError + 'static> Clone for SharedError<T> {
     fn clone(&self) -> Self {
-        Self { error: Arc::clone(&self.error) }
+        Self {
+            error: Arc::clone(&self.error),
+        }
     }
 }
 
 impl<T: StdError + 'static> From<T> for SharedError<T> {
     fn from(error: T) -> Self {
-        Self { error: Arc::new(error) }
+        Self {
+            error: Arc::new(error),
+        }
     }
 }
 
@@ -98,7 +102,9 @@ pub mod anyhow_ext {
 
     impl<E: Into<Error>> IntoSharedError<AnyhowSharedError> for E {
         fn shared_error(self) -> AnyhowSharedError {
-            AnyhowSharedError { error: Arc::new(self.into()) }
+            AnyhowSharedError {
+                error: Arc::new(self.into()),
+            }
         }
     }
 

@@ -35,11 +35,17 @@ pub enum Auth0Error {
     #[error("Issuer mismatch: expected {expected}, found {found}")]
     IssuerMismatch { expected: String, found: String },
     #[error("Audience mismatch: expected {expected:?}, found {found:?}")]
-    AudienceMismatch { expected: Vec<String>, found: Vec<String> },
+    AudienceMismatch {
+        expected: Vec<String>,
+        found: Vec<String>,
+    },
     #[error("JWKS fetch error: {0}")]
     JwksFetchError(String),
     #[error("Insufficient permissions: required {required}, available {available:?}")]
-    Forbidden { required: String, available: Vec<String> },
+    Forbidden {
+        required: String,
+        available: Vec<String>,
+    },
 }
 
 /// Configuration for the Auth0 SSO Adapter.
@@ -77,7 +83,10 @@ impl Auth0Config {
     }
 
     pub fn jwks_url(&self) -> String {
-        format!("https://{}/.well-known/jwks.json", self.domain.trim_end_matches('/'))
+        format!(
+            "https://{}/.well-known/jwks.json",
+            self.domain.trim_end_matches('/')
+        )
     }
 }
 
@@ -187,7 +196,10 @@ impl JwksKeyCache {
         self.refresh(jwks_url).await?;
 
         let cache = self.keys.read().await;
-        cache.get(kid).cloned().ok_or_else(|| Auth0Error::KeyNotFound(kid.to_string()))
+        cache
+            .get(kid)
+            .cloned()
+            .ok_or_else(|| Auth0Error::KeyNotFound(kid.to_string()))
     }
 
     pub async fn refresh(&self, jwks_url: &str) -> Result<(), Auth0Error> {
@@ -199,11 +211,16 @@ impl JwksKeyCache {
             .map_err(|e| Auth0Error::JwksFetchError(e.to_string()))?;
 
         if !resp.status().is_success() {
-            return Err(Auth0Error::JwksFetchError(format!("HTTP {}", resp.status())));
+            return Err(Auth0Error::JwksFetchError(format!(
+                "HTTP {}",
+                resp.status()
+            )));
         }
 
-        let body: JwksResponse =
-            resp.json().await.map_err(|e| Auth0Error::JwksFetchError(e.to_string()))?;
+        let body: JwksResponse = resp
+            .json()
+            .await
+            .map_err(|e| Auth0Error::JwksFetchError(e.to_string()))?;
 
         let mut write_guard = self.keys.write().await;
         write_guard.clear();
@@ -305,12 +322,18 @@ impl Auth0SsoValidator {
 
         // Exp check with leeway
         if now > (claims.exp + self.config.leeway_seconds) {
-            return Err(Auth0Error::TokenExpired { exp: claims.exp, now });
+            return Err(Auth0Error::TokenExpired {
+                exp: claims.exp,
+                now,
+            });
         }
 
         // Iat check with leeway
         if claims.iat > (now + self.config.leeway_seconds) {
-            return Err(Auth0Error::TokenFutureIssued { iat: claims.iat, now });
+            return Err(Auth0Error::TokenFutureIssued {
+                iat: claims.iat,
+                now,
+            });
         }
 
         // Issuer check
@@ -323,7 +346,11 @@ impl Auth0SsoValidator {
         }
 
         // Audience check
-        let aud_match = self.config.audiences.iter().any(|expected| claims.aud.contains(expected));
+        let aud_match = self
+            .config
+            .audiences
+            .iter()
+            .any(|expected| claims.aud.contains(expected));
 
         if !aud_match && !self.config.audiences.is_empty() {
             return Err(Auth0Error::AudienceMismatch {
@@ -347,7 +374,10 @@ impl Auth0SsoValidator {
 
         // Also check scope string (space-delimited)
         if let Some(ref scope_str) = claims.scope {
-            if scope_str.split_whitespace().any(|s| s == required_permission) {
+            if scope_str
+                .split_whitespace()
+                .any(|s| s == required_permission)
+            {
                 return Ok(());
             }
         }
@@ -367,7 +397,9 @@ fn base64_url_decode(input: &str) -> Result<Vec<u8>, String> {
     while s.len() % 4 != 0 {
         s.push('=');
     }
-    BASE64_STANDARD.decode(&s).map_err(|e| format!("Base64 decode failed: {e}"))
+    BASE64_STANDARD
+        .decode(&s)
+        .map_err(|e| format!("Base64 decode failed: {e}"))
 }
 
 #[cfg(test)]
@@ -375,7 +407,10 @@ mod tests {
     use super::*;
 
     fn dummy_config() -> Auth0Config {
-        Auth0Config::new("cerebral.us.auth0.com", vec!["https://vespertin.crdnl.io/v1".to_string()])
+        Auth0Config::new(
+            "cerebral.us.auth0.com",
+            vec!["https://vespertin.crdnl.io/v1".to_string()],
+        )
     }
 
     #[test]
@@ -383,7 +418,9 @@ mod tests {
         let validator = Auth0SsoValidator::new(dummy_config());
 
         // Standard Bearer
-        let token = validator.extract_token(Some("Bearer stub.bearer.sig"), None).unwrap();
+        let token = validator
+            .extract_token(Some("Bearer stub.bearer.sig"), None)
+            .unwrap();
         assert_eq!(token, "stub.bearer.sig");
 
         // Cloudflare Access header
@@ -412,8 +449,16 @@ mod tests {
         };
 
         assert!(validator.verify_claims_semantics(&claims).is_ok());
-        assert!(validator.enforce_permission(&claims, "read:vespertin-docs").is_ok());
-        assert!(validator.enforce_permission(&claims, "write:vespertin-docs").is_err());
+        assert!(
+            validator
+                .enforce_permission(&claims, "read:vespertin-docs")
+                .is_ok()
+        );
+        assert!(
+            validator
+                .enforce_permission(&claims, "write:vespertin-docs")
+                .is_err()
+        );
     }
 
     #[test]
@@ -434,7 +479,7 @@ mod tests {
         };
 
         match validator.verify_claims_semantics(&claims) {
-            Err(Auth0Error::TokenExpired { .. }) => {},
+            Err(Auth0Error::TokenExpired { .. }) => {}
             other => panic!("Expected TokenExpired, got {:?}", other),
         }
     }
@@ -457,7 +502,7 @@ mod tests {
         };
 
         match validator.verify_claims_semantics(&claims) {
-            Err(Auth0Error::AudienceMismatch { .. }) => {},
+            Err(Auth0Error::AudienceMismatch { .. }) => {}
             other => panic!("Expected AudienceMismatch, got {:?}", other),
         }
     }

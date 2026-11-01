@@ -103,7 +103,9 @@ fn shed_hygiene(root: &Path) -> ExitCode {
         return ExitCode::from(1);
     };
     if !src.contains("\"vendor/rust-shed\"") || !src.contains("rust-shed =") {
-        eprintln!("shed-hygiene: Cargo.toml must wire vendor/rust-shed in workspace and dependencies");
+        eprintln!(
+            "shed-hygiene: Cargo.toml must wire vendor/rust-shed in workspace and dependencies"
+        );
         return ExitCode::from(1);
     }
     println!("shed-hygiene: ok (vendor/rust-shed wired in herdr)");
@@ -137,7 +139,15 @@ fn smoke(root: &Path) -> ExitCode {
     if run_cmd(
         root,
         "cargo",
-        &["test", "-p", "rust-shed", "--all-features", "--lib", "-j", &j],
+        &[
+            "test",
+            "-p",
+            "rust-shed",
+            "--all-features",
+            "--lib",
+            "-j",
+            &j,
+        ],
     ) {
         ExitCode::SUCCESS
     } else {
@@ -157,9 +167,7 @@ fn xwork(root: &Path, args: &[String]) -> ExitCode {
         && (fs::read_to_string(&mem_path).is_ok_and(|s| s.trim() == expected)
             || fs::read_to_string(&state_path).is_ok_and(|s| s.trim() == expected))
     {
-        println!(
-            "xwork: worktree {expected} already verified in cortex-memfs (--fresh to force)"
-        );
+        println!("xwork: worktree {expected} already verified in cortex-memfs (--fresh to force)");
         return ExitCode::SUCCESS;
     }
 
