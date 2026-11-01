@@ -8,11 +8,17 @@
 pub mod auth0;
 pub mod borrowed;
 pub mod cloned;
+// Kept byte-identical to the vilicus source; excluded from rustfmt on purpose.
+#[rustfmt::skip]
 pub mod delta;
 pub mod lock_ext;
 pub mod shared_error;
 pub mod time_ext;
+// Kept byte-identical to the vilicus source; excluded from rustfmt on purpose.
+#[rustfmt::skip]
 pub mod varint;
+// Kept byte-identical to the vilicus source; excluded from rustfmt on purpose.
+#[rustfmt::skip]
 pub mod wire_delta;
 
 #[cfg(feature = "async")]
