@@ -1,6 +1,8 @@
 //! `herdr` Glaeda-accelerated `xtask` & `xwork` runner (`cargo xtask <command>`).
 
 mod loadout;
+#[allow(dead_code)]
+mod xwork_cache;
 
 use std::env;
 use std::fs;
@@ -208,6 +210,7 @@ fn main() -> ExitCode {
         Some("toolchain-check") => toolchain_check(&root),
         Some("shed-hygiene") => shed_hygiene(&root),
         Some("loadout") | Some("loadout-check") => loadout::run(&root, &args[1..]),
+        Some("cache") => xwork_cache::run_cache_cli(&args[1..]),
         Some("fmt") => fmt(&root, args.iter().any(|a| a == "--check")),
         Some("fmt-check") => fmt(&root, true),
         Some("smoke") => smoke(&root),
@@ -216,7 +219,7 @@ fn main() -> ExitCode {
                 eprintln!("xtask: unknown command {name:?}");
             }
             eprintln!(
-                "usage: cargo xtask <xwork|bench|hygiene|toolchain-check|shed-hygiene|loadout|fmt|fmt-check|smoke>"
+                "usage: cargo xtask <xwork|bench|hygiene|toolchain-check|shed-hygiene|loadout|cache|fmt|fmt-check|smoke>"
             );
             ExitCode::from(2)
         }

@@ -8,9 +8,12 @@
 pub mod auth0;
 pub mod borrowed;
 pub mod cloned;
+pub mod delta;
 pub mod lock_ext;
 pub mod shared_error;
 pub mod time_ext;
+pub mod varint;
+pub mod wire_delta;
 
 #[cfg(feature = "async")]
 pub mod async_once_cell;
