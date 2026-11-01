@@ -47,6 +47,8 @@ rustPlatform.buildRustPackage {
         ../vendor/libghostty-vt
         ../vendor/libghostty-vt.vendor.json
         ../vendor/portable-pty
+        ../vendor/rust-shed
+        ../xtask
         ../build.rs
         ../Cargo.lock
         ../Cargo.toml
