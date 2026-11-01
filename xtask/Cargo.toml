@@ -3,5 +3,15 @@ name = "xtask"
 version = "0.1.0"
 edition = "2024"
 publish = false
+default-run = "xtask"
+
+[[bin]]
+name = "xtask"
+path = "src/main.rs"
+
+[[bin]]
+name = "xwork-rustc"
+path = "src/bin/xwork_rustc.rs"
 
 [dependencies]
+rust-shed = { path = "../vendor/rust-shed", default-features = false, features = ["serde"] }

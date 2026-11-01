@@ -9,7 +9,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 
-use futures::future::{abortable, AbortHandle, FutureExt, Shared, TryFuture, TryFutureExt};
+use futures::future::{AbortHandle, FutureExt, Shared, TryFuture, TryFutureExt, abortable};
 use futures::ready;
 use futures::task::{Context, Poll};
 use pin_project::{pin_project, pinned_drop};
@@ -66,7 +66,10 @@ where
 {
     /// Wrap `inner` with an `on_cancel` callback.
     pub fn new(inner: Fut, on_cancel: OnCancelFn) -> Self {
-        Self { inner, on_cancel: Some(on_cancel) }
+        Self {
+            inner,
+            on_cancel: Some(on_cancel),
+        }
     }
 }
 
@@ -156,7 +159,9 @@ mod tests {
         assert!(canceled.load(Ordering::SeqCst));
 
         let completed_cancel = AtomicBool::new(false);
-        async {}.on_cancel(|| completed_cancel.store(true, Ordering::SeqCst)).await;
+        async {}
+            .on_cancel(|| completed_cancel.store(true, Ordering::SeqCst))
+            .await;
         assert!(!completed_cancel.load(Ordering::SeqCst));
     }
 }

@@ -157,7 +157,9 @@ mod tests {
 
     #[test]
     fn borrowed_basic_and_typed() {
-        let a = A { x: "hello".to_owned() };
+        let a = A {
+            x: "hello".to_owned(),
+        };
         let y = "world".to_owned();
         borrowed!(a.x: &str, y as y_ref: &str,);
         assert_eq!(format!("{x} {y_ref}"), "hello world");

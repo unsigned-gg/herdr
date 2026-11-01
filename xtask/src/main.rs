@@ -1,6 +1,8 @@
 //! `herdr` Glaeda-accelerated `xtask` & `xwork` runner (`cargo xtask <command>`).
 
 mod loadout;
+#[allow(dead_code)]
+mod xwork_cache;
 
 use std::env;
 use std::fs;
@@ -101,7 +103,9 @@ fn shed_hygiene(root: &Path) -> ExitCode {
         return ExitCode::from(1);
     };
     if !src.contains("\"vendor/rust-shed\"") || !src.contains("rust-shed =") {
-        eprintln!("shed-hygiene: Cargo.toml must wire vendor/rust-shed in workspace and dependencies");
+        eprintln!(
+            "shed-hygiene: Cargo.toml must wire vendor/rust-shed in workspace and dependencies"
+        );
         return ExitCode::from(1);
     }
     println!("shed-hygiene: ok (vendor/rust-shed wired in herdr)");
@@ -135,7 +139,15 @@ fn smoke(root: &Path) -> ExitCode {
     if run_cmd(
         root,
         "cargo",
-        &["test", "-p", "rust-shed", "--all-features", "--lib", "-j", &j],
+        &[
+            "test",
+            "-p",
+            "rust-shed",
+            "--all-features",
+            "--lib",
+            "-j",
+            &j,
+        ],
     ) {
         ExitCode::SUCCESS
     } else {
@@ -155,9 +167,7 @@ fn xwork(root: &Path, args: &[String]) -> ExitCode {
         && (fs::read_to_string(&mem_path).is_ok_and(|s| s.trim() == expected)
             || fs::read_to_string(&state_path).is_ok_and(|s| s.trim() == expected))
     {
-        println!(
-            "xwork: worktree {expected} already verified in cortex-memfs (--fresh to force)"
-        );
+        println!("xwork: worktree {expected} already verified in cortex-memfs (--fresh to force)");
         return ExitCode::SUCCESS;
     }
 
@@ -208,6 +218,7 @@ fn main() -> ExitCode {
         Some("toolchain-check") => toolchain_check(&root),
         Some("shed-hygiene") => shed_hygiene(&root),
         Some("loadout") | Some("loadout-check") => loadout::run(&root, &args[1..]),
+        Some("cache") => xwork_cache::run_cache_cli(&args[1..]),
         Some("fmt") => fmt(&root, args.iter().any(|a| a == "--check")),
         Some("fmt-check") => fmt(&root, true),
         Some("smoke") => smoke(&root),
@@ -216,7 +227,7 @@ fn main() -> ExitCode {
                 eprintln!("xtask: unknown command {name:?}");
             }
             eprintln!(
-                "usage: cargo xtask <xwork|bench|hygiene|toolchain-check|shed-hygiene|loadout|fmt|fmt-check|smoke>"
+                "usage: cargo xtask <xwork|bench|hygiene|toolchain-check|shed-hygiene|loadout|cache|fmt|fmt-check|smoke>"
             );
             ExitCode::from(2)
         }

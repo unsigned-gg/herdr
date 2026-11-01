@@ -75,7 +75,9 @@ mod tests {
 
     #[test]
     fn cloned_basic_and_alias() {
-        let a = A { x: "shed".to_owned() };
+        let a = A {
+            x: "shed".to_owned(),
+        };
         let b = 42_u32;
         cloned!(a.x, b as b_copy, mut b as b_mut,);
         b_mut += 1;
