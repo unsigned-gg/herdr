@@ -59,14 +59,11 @@ impl fmt::Display for WireDeltaError {
             Self::UnsupportedVersion(v) => write!(f, "unsupported wire protocol version {v}"),
             Self::InvalidInternedString => {
                 write!(f, "invalid UTF-8 or out-of-bounds interned string")
-            }
+            },
             Self::InvalidPatchWindow => write!(f, "delta patch copy window out of bounds"),
             Self::TargetLengthMismatch { expected, actual } => {
-                write!(
-                    f,
-                    "delta patch target length mismatch: expected {expected}, got {actual}"
-                )
-            }
+                write!(f, "delta patch target length mismatch: expected {expected}, got {actual}")
+            },
         }
     }
 }
@@ -118,11 +115,11 @@ pub fn decode_quic_varint(buf: &[u8]) -> Result<(u64, usize), WireDeltaError> {
         2 => {
             let raw = u16::from_be_bytes([buf[0] & 0x3F, buf[1]]);
             u64::from(raw)
-        }
+        },
         4 => {
             let raw = u32::from_be_bytes([buf[0] & 0x3F, buf[1], buf[2], buf[3]]);
             u64::from(raw)
-        }
+        },
         8 => u64::from_be_bytes([
             buf[0] & 0x3F,
             buf[1],
@@ -492,12 +489,7 @@ impl CasDeltaPatch {
         let mut ops = Vec::new();
         let target_len = target.len() as u32;
         if target.is_empty() {
-            return Self {
-                base_digest,
-                target_digest,
-                target_len: 0,
-                ops,
-            };
+            return Self { base_digest, target_digest, target_len: 0, ops };
         }
 
         // Step 1: 8-byte (`u64`) fast common-prefix stripping
@@ -513,16 +505,8 @@ impl CasDeltaPatch {
         }
 
         if prefix_len == target.len() && prefix_len <= base.len() {
-            ops.push(DeltaOp::Copy {
-                offset: 0,
-                len: prefix_len as u32,
-            });
-            return Self {
-                base_digest,
-                target_digest,
-                target_len,
-                ops,
-            };
+            ops.push(DeltaOp::Copy { offset: 0, len: prefix_len as u32 });
+            return Self { base_digest, target_digest, target_len, ops };
         }
 
         // Step 2: 8-byte (`u64`) fast common-suffix stripping
@@ -541,10 +525,7 @@ impl CasDeltaPatch {
         }
 
         if prefix_len >= 4 {
-            ops.push(DeltaOp::Copy {
-                offset: 0,
-                len: prefix_len as u32,
-            });
+            ops.push(DeltaOp::Copy { offset: 0, len: prefix_len as u32 });
         } else {
             prefix_len = 0;
         }
@@ -599,10 +580,7 @@ impl CasDeltaPatch {
                         {
                             match_len += 1;
                         }
-                        ops.push(DeltaOp::Copy {
-                            offset: b_off as u32,
-                            len: match_len as u32,
-                        });
+                        ops.push(DeltaOp::Copy { offset: b_off as u32, len: match_len as u32 });
                         pos = t_off + match_len;
                         lit_start = pos;
                     } else {
@@ -617,18 +595,10 @@ impl CasDeltaPatch {
 
         if suffix_len > 0 {
             let suffix_base_off = (base.len() - suffix_len) as u32;
-            ops.push(DeltaOp::Copy {
-                offset: suffix_base_off,
-                len: suffix_len as u32,
-            });
+            ops.push(DeltaOp::Copy { offset: suffix_base_off, len: suffix_len as u32 });
         }
 
-        Self {
-            base_digest,
-            target_digest,
-            target_len,
-            ops,
-        }
+        Self { base_digest, target_digest, target_len, ops }
     }
 
     fn emit_literal_or_runs(slice: &[u8], ops: &mut Vec<DeltaOp>) {
@@ -639,10 +609,7 @@ impl CasDeltaPatch {
         if slice.len() >= 16 {
             let first = slice[0];
             if slice.iter().all(|&b| b == first) {
-                ops.push(DeltaOp::Run {
-                    len: slice.len() as u32,
-                    byte: first,
-                });
+                ops.push(DeltaOp::Run { len: slice.len() as u32, byte: first });
                 return;
             }
         }
@@ -661,13 +628,13 @@ impl CasDeltaPatch {
                         return Err(WireDeltaError::InvalidPatchWindow);
                     }
                     out.extend_from_slice(&base[start..end]);
-                }
+                },
                 DeltaOp::Insert(bytes) => {
                     out.extend_from_slice(bytes);
-                }
+                },
                 DeltaOp::Run { len, byte } => {
                     out.resize(out.len() + (*len as usize), *byte);
-                }
+                },
             }
         }
         if out.len() != self.target_len as usize {
@@ -695,17 +662,17 @@ impl CasDeltaPatch {
                     out.push(0x01);
                     encode_quic_varint(u64::from(*offset), &mut out)?;
                     encode_quic_varint(u64::from(*len), &mut out)?;
-                }
+                },
                 DeltaOp::Insert(bytes) => {
                     out.push(0x02);
                     encode_quic_varint(bytes.len() as u64, &mut out)?;
                     out.extend_from_slice(bytes);
-                }
+                },
                 DeltaOp::Run { len, byte } => {
                     out.push(0x03);
                     encode_quic_varint(u64::from(*len), &mut out)?;
                     out.push(*byte);
-                }
+                },
             }
         }
         Ok(out)
@@ -732,11 +699,8 @@ impl CasDeltaPatch {
                     cursor = &cursor[n1..];
                     let (len, n2) = decode_quic_varint(cursor)?;
                     cursor = &cursor[n2..];
-                    ops.push(DeltaOp::Copy {
-                        offset: offset as u32,
-                        len: len as u32,
-                    });
-                }
+                    ops.push(DeltaOp::Copy { offset: offset as u32, len: len as u32 });
+                },
                 0x02 => {
                     let (len, n1) = decode_quic_varint(cursor)?;
                     cursor = &cursor[n1..];
@@ -746,7 +710,7 @@ impl CasDeltaPatch {
                     }
                     ops.push(DeltaOp::Insert(cursor[..len].to_vec()));
                     cursor = &cursor[len..];
-                }
+                },
                 0x03 => {
                     let (len, n1) = decode_quic_varint(cursor)?;
                     cursor = &cursor[n1..];
@@ -754,11 +718,8 @@ impl CasDeltaPatch {
                         return Err(WireDeltaError::UnexpectedEof);
                     };
                     cursor = &cursor[1..];
-                    ops.push(DeltaOp::Run {
-                        len: len as u32,
-                        byte,
-                    });
-                }
+                    ops.push(DeltaOp::Run { len: len as u32, byte });
+                },
                 _ => return Err(WireDeltaError::InvalidMagic),
             }
         }
@@ -926,15 +887,7 @@ impl DrpcFrameHeader {
         let done = (control & 0x80) != 0;
         let (stream_id, n1) = decode_quic_varint(&buf[1..])?;
         let (msg_id, n2) = decode_quic_varint(&buf[1 + n1..])?;
-        Ok((
-            Self {
-                stream_id,
-                msg_id,
-                kind,
-                done,
-            },
-            1 + n1 + n2,
-        ))
+        Ok((Self { stream_id, msg_id, kind, done }, 1 + n1 + n2))
     }
 }
 
@@ -983,19 +936,16 @@ impl SojournShedder {
             None => {
                 self.first_above_time_ns = Some(now_ns);
                 SojournVerdict::Admit { sojourn_ns }
-            }
+            },
             Some(first_ns) => {
                 let sustained_ns = now_ns.saturating_sub(first_ns);
                 if sustained_ns >= self.interval_ns {
                     self.shed_count += 1;
-                    SojournVerdict::Shed {
-                        sojourn_ns,
-                        sustained_ns,
-                    }
+                    SojournVerdict::Shed { sojourn_ns, sustained_ns }
                 } else {
                     SojournVerdict::Admit { sojourn_ns }
                 }
-            }
+            },
         }
     }
 }
@@ -1060,10 +1010,7 @@ mod tests {
                 payload_len: 4096 + (i * 128),
             });
         }
-        let stream = DeltaStream {
-            run_hash: [0x42; 32],
-            entries,
-        };
+        let stream = DeltaStream { run_hash: [0x42; 32], entries };
         let wire = stream.encode().unwrap();
 
         // Zero-copy view (`buffa` pattern) borrows interned paths & turns directly from `wire`
@@ -1071,11 +1018,7 @@ mod tests {
         assert_eq!(view.paths.len(), 6);
         assert_eq!(view.turns.len(), 4);
         assert_eq!(view.entry_count, 200);
-        assert!(
-            wire.len() < 4_500,
-            "expected SCDS wire size < 4.5 KiB, got {} B",
-            wire.len()
-        );
+        assert!(wire.len() < 4_500, "expected SCDS wire size < 4.5 KiB, got {} B", wire.len());
 
         let decoded = DeltaStream::decode(&wire).unwrap();
         assert_eq!(decoded, stream);
@@ -1128,12 +1071,7 @@ mod tests {
         let decoded = SrptGrantToken::from_bytes(&bytes).unwrap();
         assert_eq!(decoded, token);
 
-        let hdr = DrpcFrameHeader {
-            stream_id: 7,
-            msg_id: 99,
-            kind: 0x02,
-            done: true,
-        };
+        let hdr = DrpcFrameHeader { stream_id: 7, msg_id: 99, kind: 0x02, done: true };
         let mut hbuf = Vec::new();
         let n = hdr.encode(&mut hbuf).unwrap();
         assert!(n <= 9);
@@ -1144,15 +1082,10 @@ mod tests {
         let mut shedder = SojournShedder::new(5_000_000, 100_000_000);
         assert!(matches!(
             shedder.evaluate(0, 2_000_000),
-            SojournVerdict::Admit {
-                sojourn_ns: 2_000_000
-            }
+            SojournVerdict::Admit { sojourn_ns: 2_000_000 }
         ));
         // First spike above 5ms enters tracking window, still admits
-        assert!(matches!(
-            shedder.evaluate(10_000_000, 20_000_000),
-            SojournVerdict::Admit { .. }
-        ));
+        assert!(matches!(shedder.evaluate(10_000_000, 20_000_000), SojournVerdict::Admit { .. }));
         // Sustained >5ms sojourn after 100ms interval -> Shed!
         assert!(matches!(
             shedder.evaluate(110_000_000, 125_000_000),

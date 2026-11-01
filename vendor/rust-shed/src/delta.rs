@@ -57,11 +57,7 @@ pub enum DeltaError {
     /// Reconstructed size does not match declared target size.
     SizeMismatch { reconstructed: usize, expected: u64 },
     /// Base copy offset or length out of range.
-    BaseOutOfRange {
-        offset: u64,
-        len: u64,
-        base_len: usize,
-    },
+    BaseOutOfRange { offset: u64, len: u64, base_len: usize },
     /// Invalid instruction tag byte.
     InvalidInstructionTag(u8),
     /// Instruction has zero length where non-zero is required.
@@ -86,47 +82,30 @@ impl fmt::Display for DeltaError {
             Self::UnsupportedVersion(v) => write!(f, "unsupported wire version: {v}"),
             Self::Truncated { needed, have } => {
                 write!(f, "frame truncated: needed {needed} bytes, have {have}")
-            }
+            },
             Self::TrailingBytes(n) => write!(f, "frame contains {n} unparsed trailing bytes"),
             Self::TargetSizeExceeded { size, max } => {
                 write!(f, "target size {size} exceeds maximum {max}")
-            }
-            Self::SizeMismatch {
-                reconstructed,
-                expected,
-            } => {
-                write!(
-                    f,
-                    "reconstructed size {reconstructed} does not match expected {expected}"
-                )
-            }
-            Self::BaseOutOfRange {
-                offset,
-                len,
-                base_len,
-            } => {
-                write!(
-                    f,
-                    "copy range {offset}..{} exceeds base length {base_len}",
-                    offset + len
-                )
-            }
+            },
+            Self::SizeMismatch { reconstructed, expected } => {
+                write!(f, "reconstructed size {reconstructed} does not match expected {expected}")
+            },
+            Self::BaseOutOfRange { offset, len, base_len } => {
+                write!(f, "copy range {offset}..{} exceeds base length {base_len}", offset + len)
+            },
             Self::InvalidInstructionTag(tag) => write!(f, "invalid delta instruction tag: {tag}"),
             Self::ZeroLengthInstruction => write!(f, "instruction has invalid zero length"),
             Self::InvalidEncoding(field) => write!(f, "invalid encoding in field: {field}"),
             Self::CountExceedsFrame { count, remaining } => {
-                write!(
-                    f,
-                    "declared count {count} exceeds remaining bytes {remaining}"
-                )
-            }
+                write!(f, "declared count {count} exceeds remaining bytes {remaining}")
+            },
             Self::NonMonotonicSeq { seq, prev } => {
                 write!(f, "non-monotonic sequence {seq} after {prev}")
-            }
+            },
             Self::TimestampOverflow(msg) => write!(f, "timestamp overflow: {msg}"),
             Self::InvalidDiscriminant(name, val) => {
                 write!(f, "invalid discriminant for {name}: {val}")
-            }
+            },
         }
     }
 }
@@ -231,10 +210,7 @@ impl CasDeltaPatch {
 
         let prefix_len = common_prefix_len(base, target);
         if prefix_len >= MIN_DELTA_MATCH_LEN {
-            instructions.push(DeltaInstruction::Copy {
-                offset: 0,
-                len: prefix_len as u64,
-            });
+            instructions.push(DeltaInstruction::Copy { offset: 0, len: prefix_len as u64 });
         }
 
         let max_suffix = (base.len() - prefix_len).min(target.len() - prefix_len);
@@ -331,26 +307,19 @@ impl CasDeltaPatch {
                         pending_insert.pop();
                     }
                     if !pending_insert.is_empty() {
-                        instructions.push(DeltaInstruction::Insert(std::mem::take(
-                            &mut pending_insert,
-                        )));
+                        instructions
+                            .push(DeltaInstruction::Insert(std::mem::take(&mut pending_insert)));
                     }
-                    instructions.push(DeltaInstruction::Copy {
-                        offset: offset as u64,
-                        len: len as u64,
-                    });
+                    instructions
+                        .push(DeltaInstruction::Copy { offset: offset as u64, len: len as u64 });
                     pos += copy_len;
                 }
             } else if run_len >= MIN_DELTA_MATCH_LEN {
                 if !pending_insert.is_empty() {
-                    instructions.push(DeltaInstruction::Insert(std::mem::take(
-                        &mut pending_insert,
-                    )));
+                    instructions
+                        .push(DeltaInstruction::Insert(std::mem::take(&mut pending_insert)));
                 }
-                instructions.push(DeltaInstruction::Run {
-                    len: run_len as u64,
-                    byte: run_byte,
-                });
+                instructions.push(DeltaInstruction::Run { len: run_len as u64, byte: run_byte });
                 pos += run_len;
             } else {
                 pending_insert.push(target[pos]);
@@ -368,9 +337,8 @@ impl CasDeltaPatch {
                 len: suffix_len as u64,
             });
         } else if suffix_len > 0 {
-            instructions.push(DeltaInstruction::Insert(
-                target[target.len() - suffix_len..].to_vec(),
-            ));
+            instructions
+                .push(DeltaInstruction::Insert(target[target.len() - suffix_len..].to_vec()));
         }
 
         Self {
@@ -387,9 +355,7 @@ impl CasDeltaPatch {
         buf.extend_from_slice(&CAS_DELTA_MAGIC);
         buf.push(CAS_DELTA_VERSION);
         if self.base_digest.len() != BLAKE3_HEX_LEN || self.target_digest.len() != BLAKE3_HEX_LEN {
-            return Err(DeltaError::InvalidEncoding(
-                "digests must be 64-char ASCII hex",
-            ));
+            return Err(DeltaError::InvalidEncoding("digests must be 64-char ASCII hex"));
         }
         buf.extend_from_slice(self.base_digest.as_bytes());
         buf.extend_from_slice(self.target_digest.as_bytes());
@@ -402,16 +368,16 @@ impl CasDeltaPatch {
                     buf.push(0);
                     encode_varint(*offset, &mut buf)?;
                     encode_varint(*len, &mut buf)?;
-                }
+                },
                 DeltaInstruction::Insert(lit) => {
                     buf.push(1);
                     encode_len_prefixed(lit, &mut buf)?;
-                }
+                },
                 DeltaInstruction::Run { len, byte } => {
                     buf.push(2);
                     encode_varint(*len, &mut buf)?;
                     buf.push(*byte);
-                }
+                },
             }
         }
         Ok(buf)
@@ -425,13 +391,13 @@ impl CasDeltaPatch {
             match inst? {
                 DeltaInstructionView::Copy { offset, len } => {
                     instructions.push(DeltaInstruction::Copy { offset, len });
-                }
+                },
                 DeltaInstructionView::Insert(slice) => {
                     instructions.push(DeltaInstruction::Insert(slice.to_vec()));
-                }
+                },
                 DeltaInstructionView::Run { len, byte } => {
                     instructions.push(DeltaInstruction::Run { len, byte });
-                }
+                },
             }
         }
         Ok(Self {
@@ -444,11 +410,9 @@ impl CasDeltaPatch {
 
     /// Apply this delta patch against `base` to reconstruct the target payload.
     pub fn apply(&self, base: &[u8]) -> Result<Vec<u8>, DeltaError> {
-        let target_len =
-            usize::try_from(self.target_size).map_err(|_| DeltaError::TargetSizeExceeded {
-                size: self.target_size,
-                max: usize::MAX as u64,
-            })?;
+        let target_len = usize::try_from(self.target_size).map_err(|_| {
+            DeltaError::TargetSizeExceeded { size: self.target_size, max: usize::MAX as u64 }
+        })?;
         if target_len > MAX_DELTA_TARGET_BYTES {
             return Err(DeltaError::TargetSizeExceeded {
                 size: self.target_size,
@@ -471,13 +435,11 @@ impl CasDeltaPatch {
                             len: *len,
                             base_len: base.len(),
                         })?;
-                    let end = off
-                        .checked_add(copy_len)
-                        .ok_or(DeltaError::BaseOutOfRange {
-                            offset: *offset,
-                            len: *len,
-                            base_len: base.len(),
-                        })?;
+                    let end = off.checked_add(copy_len).ok_or(DeltaError::BaseOutOfRange {
+                        offset: *offset,
+                        len: *len,
+                        base_len: base.len(),
+                    })?;
                     if end > base.len() {
                         return Err(DeltaError::BaseOutOfRange {
                             offset: *offset,
@@ -492,7 +454,7 @@ impl CasDeltaPatch {
                         });
                     }
                     out.extend_from_slice(&base[off..end]);
-                }
+                },
                 DeltaInstruction::Insert(lit) => {
                     if lit.is_empty() {
                         return Err(DeltaError::ZeroLengthInstruction);
@@ -504,7 +466,7 @@ impl CasDeltaPatch {
                         });
                     }
                     out.extend_from_slice(lit);
-                }
+                },
                 DeltaInstruction::Run { len, byte } => {
                     if *len == 0 {
                         return Err(DeltaError::ZeroLengthInstruction);
@@ -520,7 +482,7 @@ impl CasDeltaPatch {
                         });
                     }
                     out.resize(out.len() + run_len, *byte);
-                }
+                },
             }
         }
 
@@ -553,15 +515,10 @@ impl<'a> CasDeltaPatchView<'a> {
     pub fn parse(bytes: &'a [u8]) -> Result<Self, DeltaError> {
         const MIN_HEADER: usize = 4 + 1 + BLAKE3_HEX_LEN + BLAKE3_HEX_LEN;
         if bytes.len() < MIN_HEADER {
-            return Err(DeltaError::Truncated {
-                needed: MIN_HEADER,
-                have: bytes.len(),
-            });
+            return Err(DeltaError::Truncated { needed: MIN_HEADER, have: bytes.len() });
         }
         if bytes[0..4] != CAS_DELTA_MAGIC {
-            return Err(DeltaError::MagicMismatch([
-                bytes[0], bytes[1], bytes[2], bytes[3],
-            ]));
+            return Err(DeltaError::MagicMismatch([bytes[0], bytes[1], bytes[2], bytes[3]]));
         }
         let version = bytes[4];
         if version != CAS_DELTA_VERSION {
@@ -585,11 +542,8 @@ impl<'a> CasDeltaPatchView<'a> {
 
         let (count_u64, used) = decode_varint(&bytes[cursor..])?;
         cursor += used;
-        let instruction_count =
-            usize::try_from(count_u64).map_err(|_| DeltaError::CountExceedsFrame {
-                count: usize::MAX,
-                remaining: 0,
-            })?;
+        let instruction_count = usize::try_from(count_u64)
+            .map_err(|_| DeltaError::CountExceedsFrame { count: usize::MAX, remaining: 0 })?;
         if instruction_count > bytes.len().saturating_sub(cursor) {
             return Err(DeltaError::CountExceedsFrame {
                 count: instruction_count,
@@ -616,11 +570,9 @@ impl<'a> CasDeltaPatchView<'a> {
 
     /// Apply this delta view directly to reconstruct target bytes without materializing instructions.
     pub fn apply(&self, base: &[u8]) -> Result<Vec<u8>, DeltaError> {
-        let target_len =
-            usize::try_from(self.target_size).map_err(|_| DeltaError::TargetSizeExceeded {
-                size: self.target_size,
-                max: usize::MAX as u64,
-            })?;
+        let target_len = usize::try_from(self.target_size).map_err(|_| {
+            DeltaError::TargetSizeExceeded { size: self.target_size, max: usize::MAX as u64 }
+        })?;
         if target_len > MAX_DELTA_TARGET_BYTES {
             return Err(DeltaError::TargetSizeExceeded {
                 size: self.target_size,
@@ -638,19 +590,14 @@ impl<'a> CasDeltaPatchView<'a> {
                         len,
                         base_len: base.len(),
                     })?;
-                    let copy_len =
-                        usize::try_from(len).map_err(|_| DeltaError::BaseOutOfRange {
-                            offset,
-                            len,
-                            base_len: base.len(),
-                        })?;
-                    let end = off
-                        .checked_add(copy_len)
-                        .ok_or(DeltaError::BaseOutOfRange {
-                            offset,
-                            len,
-                            base_len: base.len(),
-                        })?;
+                    let copy_len = usize::try_from(len).map_err(|_| {
+                        DeltaError::BaseOutOfRange { offset, len, base_len: base.len() }
+                    })?;
+                    let end = off.checked_add(copy_len).ok_or(DeltaError::BaseOutOfRange {
+                        offset,
+                        len,
+                        base_len: base.len(),
+                    })?;
                     if end > base.len() {
                         return Err(DeltaError::BaseOutOfRange {
                             offset,
@@ -665,7 +612,7 @@ impl<'a> CasDeltaPatchView<'a> {
                         });
                     }
                     out.extend_from_slice(&base[off..end]);
-                }
+                },
                 DeltaInstructionView::Insert(lit) => {
                     if lit.is_empty() {
                         return Err(DeltaError::ZeroLengthInstruction);
@@ -677,7 +624,7 @@ impl<'a> CasDeltaPatchView<'a> {
                         });
                     }
                     out.extend_from_slice(lit);
-                }
+                },
                 DeltaInstructionView::Run { len, byte } => {
                     if len == 0 {
                         return Err(DeltaError::ZeroLengthInstruction);
@@ -693,7 +640,7 @@ impl<'a> CasDeltaPatchView<'a> {
                         });
                     }
                     out.resize(out.len() + run_len, byte);
-                }
+                },
             }
         }
 
@@ -752,7 +699,7 @@ impl<'a> Iterator for DeltaInstructionIter<'a> {
                 }
                 self.remaining = &self.remaining[cursor..];
                 Some(Ok(DeltaInstructionView::Copy { offset, len }))
-            }
+            },
             1 => {
                 let (slice, used) =
                     match decode_len_prefixed(&self.remaining[cursor..], MAX_DELTA_TARGET_BYTES) {
@@ -765,7 +712,7 @@ impl<'a> Iterator for DeltaInstructionIter<'a> {
                 }
                 self.remaining = &self.remaining[cursor..];
                 Some(Ok(DeltaInstructionView::Insert(slice)))
-            }
+            },
             2 => {
                 let (len, u1) = match decode_varint(&self.remaining[cursor..]) {
                     Ok(res) => res,
@@ -785,7 +732,7 @@ impl<'a> Iterator for DeltaInstructionIter<'a> {
                 cursor += 1;
                 self.remaining = &self.remaining[cursor..];
                 Some(Ok(DeltaInstructionView::Run { len, byte }))
-            }
+            },
             other => Some(Err(DeltaError::InvalidInstructionTag(other))),
         }
     }
@@ -898,7 +845,7 @@ impl<'a> RunHashWire<'a> {
                 } else {
                     false
                 }
-            }
+            },
             Self::String(s) => *s == other,
         }
     }
@@ -955,15 +902,10 @@ impl<'a> DeltaStreamView<'a> {
     pub fn parse(bytes: &'a [u8]) -> Result<Self, DeltaError> {
         const MIN_HEADER: usize = 4 + 1 + 1;
         if bytes.len() < MIN_HEADER {
-            return Err(DeltaError::Truncated {
-                needed: MIN_HEADER,
-                have: bytes.len(),
-            });
+            return Err(DeltaError::Truncated { needed: MIN_HEADER, have: bytes.len() });
         }
         if bytes[0..4] != DELTA_STREAM_MAGIC {
-            return Err(DeltaError::MagicMismatch([
-                bytes[0], bytes[1], bytes[2], bytes[3],
-            ]));
+            return Err(DeltaError::MagicMismatch([bytes[0], bytes[1], bytes[2], bytes[3]]));
         }
         if bytes[4] != DELTA_STREAM_VERSION {
             return Err(DeltaError::UnsupportedVersion(bytes[4]));
@@ -975,32 +917,26 @@ impl<'a> DeltaStreamView<'a> {
         let run_hash = match run_flag {
             1 => {
                 if bytes.len().saturating_sub(cursor) < 32 {
-                    return Err(DeltaError::Truncated {
-                        needed: cursor + 32,
-                        have: bytes.len(),
-                    });
+                    return Err(DeltaError::Truncated { needed: cursor + 32, have: bytes.len() });
                 }
                 let raw: &'a [u8; 32] = bytes[cursor..cursor + 32].try_into().unwrap();
                 cursor += 32;
                 RunHashWire::Packed(raw)
-            }
+            },
             0 => {
                 let (slice, used) = decode_len_prefixed(&bytes[cursor..], 256)?;
                 cursor += used;
                 let s = std::str::from_utf8(slice)
                     .map_err(|_| DeltaError::InvalidEncoding("run_hash"))?;
                 RunHashWire::String(s)
-            }
+            },
             other => return Err(DeltaError::InvalidDiscriminant("run_flag", other)),
         };
 
         let (path_count_u64, used) = decode_varint(&bytes[cursor..])?;
         cursor += used;
-        let path_count =
-            usize::try_from(path_count_u64).map_err(|_| DeltaError::CountExceedsFrame {
-                count: usize::MAX,
-                remaining: 0,
-            })?;
+        let path_count = usize::try_from(path_count_u64)
+            .map_err(|_| DeltaError::CountExceedsFrame { count: usize::MAX, remaining: 0 })?;
         if path_count > bytes.len().saturating_sub(cursor) {
             return Err(DeltaError::CountExceedsFrame {
                 count: path_count,
@@ -1018,11 +954,8 @@ impl<'a> DeltaStreamView<'a> {
 
         let (turn_count_u64, used) = decode_varint(&bytes[cursor..])?;
         cursor += used;
-        let turn_count =
-            usize::try_from(turn_count_u64).map_err(|_| DeltaError::CountExceedsFrame {
-                count: usize::MAX,
-                remaining: 0,
-            })?;
+        let turn_count = usize::try_from(turn_count_u64)
+            .map_err(|_| DeltaError::CountExceedsFrame { count: usize::MAX, remaining: 0 })?;
         if turn_count > bytes.len().saturating_sub(cursor) {
             return Err(DeltaError::CountExceedsFrame {
                 count: turn_count,
@@ -1040,11 +973,8 @@ impl<'a> DeltaStreamView<'a> {
 
         let (delta_count_u64, used) = decode_varint(&bytes[cursor..])?;
         cursor += used;
-        let delta_count =
-            usize::try_from(delta_count_u64).map_err(|_| DeltaError::CountExceedsFrame {
-                count: usize::MAX,
-                remaining: 0,
-            })?;
+        let delta_count = usize::try_from(delta_count_u64)
+            .map_err(|_| DeltaError::CountExceedsFrame { count: usize::MAX, remaining: 0 })?;
         if delta_count > bytes.len().saturating_sub(cursor) {
             return Err(DeltaError::CountExceedsFrame {
                 count: delta_count,
@@ -1127,7 +1057,7 @@ impl<'a, 'b> Iterator for DeltaStreamIter<'a, 'b> {
                         seq: u64::MAX,
                         prev: self.prev_seq,
                     }));
-                }
+                },
             }
         };
         self.prev_seq = seq;
@@ -1142,9 +1072,7 @@ impl<'a, 'b> Iterator for DeltaStreamIter<'a, 'b> {
         cursor += 1;
 
         if (flags & 0x80 != 0) && (flags & 0x10 == 0) {
-            return Some(Err(DeltaError::InvalidEncoding(
-                "content_hash 0x80 without 0x10",
-            )));
+            return Some(Err(DeltaError::InvalidEncoding("content_hash 0x80 without 0x10")));
         }
 
         let kind = match DeltaOpKind::from_wire_code(flags & 0x07) {
@@ -1166,7 +1094,7 @@ impl<'a, 'b> Iterator for DeltaStreamIter<'a, 'b> {
                         count: path_idx,
                         remaining: self.view.path_table.len(),
                     }));
-                }
+                },
             }
         } else {
             None
@@ -1213,7 +1141,7 @@ impl<'a, 'b> Iterator for DeltaStreamIter<'a, 'b> {
                         count: turn_idx,
                         remaining: self.view.turn_table.len(),
                     }));
-                }
+                },
             }
         } else {
             None
@@ -1369,10 +1297,7 @@ impl DeltaStream {
                 d.seq
             } else {
                 if d.seq <= prev_seq {
-                    return Err(DeltaError::NonMonotonicSeq {
-                        seq: d.seq,
-                        prev: prev_seq,
-                    });
+                    return Err(DeltaError::NonMonotonicSeq { seq: d.seq, prev: prev_seq });
                 }
                 d.seq - prev_seq
             };
@@ -1428,9 +1353,7 @@ impl DeltaStream {
                     .ok_or(DeltaError::TimestampOverflow("timestamp delta overflow"))?;
                 let dod = dt
                     .checked_sub(prev_dt_ms)
-                    .ok_or(DeltaError::TimestampOverflow(
-                        "timestamp delta-of-delta overflow",
-                    ))?;
+                    .ok_or(DeltaError::TimestampOverflow("timestamp delta-of-delta overflow"))?;
                 encode_signed_varint(dod, &mut buf)?;
                 prev_dt_ms = dt;
             }
@@ -1481,10 +1404,7 @@ mod tests {
         assert_eq!(patch.instructions.len(), 1);
         assert_eq!(
             patch.instructions[0],
-            DeltaInstruction::Copy {
-                offset: 0,
-                len: data.len() as u64
-            }
+            DeltaInstruction::Copy { offset: 0, len: data.len() as u64 }
         );
 
         let wire = patch.encode_wire().expect("wire encoding");
@@ -1655,10 +1575,7 @@ mod tests {
         assert_eq!(op3.kind, DeltaOpKind::ToolCall);
         assert_eq!(op3.path, None);
         assert_eq!(op3.prompt_turn_id, Some("turn-002"));
-        assert_eq!(
-            op3.content_hash_to_string(),
-            Some("non-hex-custom-digest".to_string())
-        );
+        assert_eq!(op3.content_hash_to_string(), Some("non-hex-custom-digest".to_string()));
         assert_eq!(op3.timestamp_millis, 1700000000120);
         assert_eq!(op3.timestamp_nanos, 654321);
 
@@ -1701,10 +1618,7 @@ mod tests {
         // 1. Bad magic
         let mut bad_magic = wire.clone();
         bad_magic[0] = b'X';
-        assert!(matches!(
-            DeltaStreamView::parse(&bad_magic),
-            Err(DeltaError::MagicMismatch(_))
-        ));
+        assert!(matches!(DeltaStreamView::parse(&bad_magic), Err(DeltaError::MagicMismatch(_))));
 
         // 2. Unsupported version
         let mut bad_ver = wire.clone();
@@ -1715,10 +1629,7 @@ mod tests {
         ));
 
         // 3. Truncated
-        assert!(matches!(
-            DeltaStreamView::parse(&wire[..5]),
-            Err(DeltaError::Truncated { .. })
-        ));
+        assert!(matches!(DeltaStreamView::parse(&wire[..5]), Err(DeltaError::Truncated { .. })));
 
         // 4. Non-monotonic sequences
         let non_monotonic = DeltaStream {

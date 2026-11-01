@@ -46,20 +46,17 @@ impl fmt::Display for VarintError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::TooLarge(v) => {
-                write!(
-                    f,
-                    "value {v} is larger than the varint maximum {MAX_VARINT}"
-                )
-            }
+                write!(f, "value {v} is larger than the varint maximum {MAX_VARINT}")
+            },
             Self::SignedOutOfRange(v) => {
                 write!(f, "signed value {v} is outside the ZigZag varint range")
-            }
+            },
             Self::Truncated { needed, have } => {
                 write!(f, "varint needs {needed} bytes, input has {have}")
-            }
+            },
             Self::LengthOverLimit { len, max } => {
                 write!(f, "length {len} is larger than the limit {max}")
-            }
+            },
         }
     }
 }
@@ -99,10 +96,7 @@ pub fn decode_varint(buf: &[u8]) -> Result<(u64, usize), VarintError> {
     };
     let width = 1usize << (first >> 6);
     let Some(bytes) = buf.get(..width) else {
-        return Err(VarintError::Truncated {
-            needed: width,
-            have: buf.len(),
-        });
+        return Err(VarintError::Truncated { needed: width, have: buf.len() });
     };
     // Fold the bytes big-endian; the two prefix bits are masked off the first.
     let val = bytes[1..]
@@ -168,10 +162,7 @@ pub fn decode_len_prefixed(buf: &[u8], max_len: usize) -> Result<(&[u8], usize),
         .checked_add(len_usize)
         .ok_or(VarintError::LengthOverLimit { len, max: max_len })?;
     let Some(slice) = buf.get(prefix..end) else {
-        return Err(VarintError::Truncated {
-            needed: end,
-            have: buf.len(),
-        });
+        return Err(VarintError::Truncated { needed: end, have: buf.len() });
     };
     Ok((slice, end))
 }
@@ -205,10 +196,7 @@ mod tests {
                 if width == 1 {
                     Err(VarintError::Truncated { needed: 1, have: 0 })
                 } else {
-                    Err(VarintError::Truncated {
-                        needed: width,
-                        have: width - 1,
-                    })
+                    Err(VarintError::Truncated { needed: width, have: width - 1 })
                 }
             );
         }
@@ -221,10 +209,7 @@ mod tests {
             encode_varint(MAX_VARINT + 1, &mut buf),
             Err(VarintError::TooLarge(MAX_VARINT + 1))
         );
-        assert_eq!(
-            encode_varint(u64::MAX, &mut buf),
-            Err(VarintError::TooLarge(u64::MAX))
-        );
+        assert_eq!(encode_varint(u64::MAX, &mut buf), Err(VarintError::TooLarge(u64::MAX)));
         assert_eq!(buf, [0xAA]);
     }
 
@@ -235,10 +220,7 @@ mod tests {
             decode_varint(&[0xc2, 0x19, 0x7c, 0x5e, 0xff, 0x14, 0xe8, 0x8c]).unwrap(),
             (151_288_809_941_952_652, 8)
         );
-        assert_eq!(
-            decode_varint(&[0x9d, 0x7f, 0x3e, 0x7d]).unwrap(),
-            (494_878_333, 4)
-        );
+        assert_eq!(decode_varint(&[0x9d, 0x7f, 0x3e, 0x7d]).unwrap(), (494_878_333, 4));
         assert_eq!(decode_varint(&[0x7b, 0xbd]).unwrap(), (15_293, 2));
         assert_eq!(decode_varint(&[0x25]).unwrap(), (37, 1));
         // A longer-than-needed form of 37 is also valid.
