@@ -866,6 +866,12 @@
       "title": "UI and sidebar",
       "keys": [
         {
+          "key": "ui.local_label",
+          "type": "string",
+          "default": "unset",
+          "description": "Sidebar and switcher label for the local Herdr endpoint. Unset or empty uses \"Local\"."
+        },
+        {
           "key": "ui.sidebar_width",
           "type": "integer",
           "default": "26",

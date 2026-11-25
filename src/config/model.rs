@@ -934,9 +934,14 @@ impl<'de> Deserialize<'de> for PaneBordersConfig {
     }
 }
 
+const DEFAULT_LOCAL_ENDPOINT_LABEL: &str = "Local";
+const MAX_LOCAL_ENDPOINT_LABEL_BYTES: usize = 128;
+
 #[derive(Debug, Deserialize)]
 #[serde(default)]
 pub struct UiConfig {
+    /// Sidebar and switcher label for the local Herdr endpoint. Unset or empty uses "Local".
+    pub local_label: Option<String>,
     pub sidebar_width: u16,
     /// Minimum sidebar width (columns) when expanded. Default: 18.
     pub sidebar_min_width: u16,
@@ -1198,6 +1203,7 @@ impl Default for WorktreesConfig {
 impl Default for UiConfig {
     fn default() -> Self {
         Self {
+            local_label: None,
             sidebar_width: 26,
             sidebar_min_width: 18,
             sidebar_max_width: 36,
@@ -1235,6 +1241,27 @@ impl Default for UiConfig {
 }
 
 impl UiConfig {
+    pub fn effective_local_label(&self) -> &str {
+        self.local_label
+            .as_deref()
+            .filter(|raw| !raw.chars().any(char::is_control))
+            .map(str::trim)
+            .filter(|label| !label.is_empty() && label.len() <= MAX_LOCAL_ENDPOINT_LABEL_BYTES)
+            .unwrap_or(DEFAULT_LOCAL_ENDPOINT_LABEL)
+    }
+
+    pub(crate) fn local_label_diagnostic(&self) -> Option<String> {
+        let raw = self.local_label.as_deref()?;
+        let trimmed = raw.trim();
+        if raw.chars().any(char::is_control) || trimmed.len() > MAX_LOCAL_ENDPOINT_LABEL_BYTES {
+            Some(format!(
+                "ui.local_label must be at most {MAX_LOCAL_ENDPOINT_LABEL_BYTES} bytes and contain no control characters; using \"{DEFAULT_LOCAL_ENDPOINT_LABEL}\""
+            ))
+        } else {
+            None
+        }
+    }
+
     pub fn mouse_scroll_lines(&self) -> usize {
         self.mouse_scroll_lines
             .map(NonZeroUsize::get)
@@ -1691,6 +1718,29 @@ mobile_width_threshold = 96
         assert_eq!(config.ui.sidebar_min_width, 12);
         assert_eq!(config.ui.sidebar_max_width, 80);
         assert_eq!(config.ui.mobile_width_threshold, 96);
+    }
+
+    #[test]
+    fn local_label_defaults_to_local_and_parses_override() {
+        let default_config = Config::default();
+        assert_eq!(default_config.ui.local_label, None);
+        assert_eq!(default_config.ui.effective_local_label(), "Local");
+        assert!(default_config.collect_diagnostics().is_empty());
+
+        let configured: Config = toml::from_str("[ui]\nlocal_label = \" ceres \"\n").unwrap();
+        assert_eq!(configured.ui.effective_local_label(), "ceres");
+        assert!(configured.collect_diagnostics().is_empty());
+
+        let blank: Config = toml::from_str("[ui]\nlocal_label = \"   \"\n").unwrap();
+        assert_eq!(blank.ui.effective_local_label(), "Local");
+        assert!(blank.collect_diagnostics().is_empty());
+
+        let invalid: Config = toml::from_str("[ui]\nlocal_label = \"ceres\\n\"\n").unwrap();
+        assert_eq!(invalid.ui.effective_local_label(), "Local");
+        assert!(invalid
+            .collect_diagnostics()
+            .iter()
+            .any(|diag| diag.contains("ui.local_label")));
     }
 
     #[test]
