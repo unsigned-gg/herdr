@@ -1033,6 +1033,81 @@ fn sidebar_renders_local_and_saved_ssh_endpoints_with_status() {
 }
 
 #[test]
+fn configured_local_label_renders_across_sidebar_navigator_and_live_reload() {
+    let mut cfg = Config::default();
+    cfg.ui.local_label = Some("ceres".into());
+    cfg.ui.sidebar.agents = toml::from_str(
+        "rows = [[{ token = 'machine', rules = [{ equals = 'ceres', bold = true }] }, 'agent']]",
+    )
+    .expect("parse agent sidebar rows");
+
+    let mut state = ClientShellState::new(ClientShellConfig::from_config(&cfg));
+    assert_eq!(state.active_endpoint_label(), "ceres");
+
+    let profile = remote_profile();
+    let remote = ClientEndpointId::Ssh(profile.id.clone());
+    state.set_endpoint_catalog(&[profile]);
+    state.set_endpoint_status(&remote, ClientEndpointStatus::Online);
+    let mut local_snap = snapshot();
+    local_snap.agents = vec![agent("claude", crate::api::schema::AgentStatus::Working, 1)];
+    state.set_endpoint_snapshot(&ClientEndpointId::Local, Box::new(local_snap));
+    let mut remote_snap = snapshot();
+    remote_snap.boot_id = "remote-boot".into();
+    remote_snap.workspaces[0].label = "remote-workspace".into();
+    state.set_endpoint_snapshot(&remote, Box::new(remote_snap));
+    state.set_pane_surface(surface());
+
+    let frame = state
+        .compose(100, 28)
+        .expect("federated frame with custom local_label");
+    let text = frame
+        .cells
+        .chunks(frame.width as usize)
+        .map(|row| {
+            row.iter()
+                .map(|cell| cell.symbol.as_str())
+                .collect::<String>()
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert!(text.contains("ceres"));
+    assert!(text.contains("new · ceres"));
+    assert!(!text.contains("Local"));
+
+    state.open_navigator_overlay();
+    let ClientShellOverlay::Navigator(navigator) = state.overlay.as_ref().expect("navigator")
+    else {
+        panic!("expected navigator");
+    };
+    let rows =
+        render::client_navigator_rows(&state.endpoints, &state.active_endpoint_id, navigator);
+    let machines = rows
+        .iter()
+        .filter(|row| matches!(row.target, ClientNavigatorTarget::Machine { .. }))
+        .map(|row| row.label.as_str())
+        .collect::<Vec<_>>();
+    assert_eq!(machines, vec!["ceres", "Build"]);
+    state.overlay = None;
+
+    state.sidebar_collapsed = true;
+    let collapsed = state.compose(100, 28).expect("collapsed frame");
+    let collapsed_buf = collapsed.to_ratatui_buffer().expect("reconstruct");
+    let agent_row_rect = state.hits.endpoint_agents[0].0;
+    assert_eq!(
+        collapsed_buf[(agent_row_rect.x, agent_row_rect.y)].symbol(),
+        "c"
+    );
+
+    // Live reload back to empty resets label to default "Local" without restart.
+    let mut reset = Config::default();
+    reset.ui.local_label = Some(String::new());
+    let diags = state.config.apply_live_config(&reset, &[], &[]);
+    assert!(diags.is_empty());
+    state.sync_local_endpoint_label();
+    assert_eq!(state.active_endpoint_label(), "Local");
+}
+
+#[test]
 fn saved_machine_preserves_endpoint_scoped_worktree_collapses() {
     fn add_worktree_group(snapshot: &mut ClientShellSnapshot, parent_id: &str, child_id: &str) {
         snapshot.workspaces[0].workspace_id = parent_id.into();

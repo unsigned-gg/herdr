@@ -235,6 +235,9 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 # directory = "~/.herdr/worktrees"
 
 [ui]
+# Label shown for this machine in the endpoint sidebar and switcher (unset or empty uses "Local")
+# local_label = "Local"
+
 # Sidebar width (auto-scaled based on workspace names, this sets the default)
 # sidebar_width = 26
 

@@ -77,6 +77,7 @@ impl ClientShellState {
                     &loaded.diagnostics,
                     &loaded.invalid_sections,
                 );
+                self.sync_local_endpoint_label();
                 if let Some(appearance) = self.host_appearance {
                     self.config.palette = crate::app::client_palette_for_appearance(
                         &self.config.theme_runtime,
@@ -113,6 +114,7 @@ impl ClientShellConfig {
     pub(crate) fn from_config(config: &Config) -> Self {
         let theme_runtime = crate::app::client_theme_runtime_from_config(config);
         Self {
+            local_label: config.ui.effective_local_label().to_owned(),
             sidebar_width: config.ui.sidebar_width,
             sidebar_min_width: config.ui.sidebar_min_width,
             sidebar_max_width: config.ui.sidebar_max_width,
@@ -340,7 +342,9 @@ impl ClientShellConfig {
                 diagnostics.push(format!("{diagnostic}; keeping previous [ui] settings"));
             } else {
                 let ui = &config.ui;
+                diagnostics.extend(ui.local_label_diagnostic());
                 diagnostics.extend(ui.sound.diagnostics());
+                self.local_label = ui.effective_local_label().to_owned();
                 self.sidebar_width = ui.sidebar_width;
                 self.sidebar_min_width = ui.sidebar_min_width;
                 self.sidebar_max_width = ui.sidebar_max_width;
@@ -478,7 +482,9 @@ mod tests {
     #[test]
     fn live_reload_applies_client_owned_sections() {
         let mut shell = ClientShellConfig::from_config(&Config::default());
+        assert_eq!(shell.local_label, "Local");
         let mut next = Config::default();
+        next.ui.local_label = Some("ceres".into());
         next.ui.sidebar_width = 31;
         next.ui.tab_bar_position = TabBarPositionConfig::Bottom;
         next.ui.agent_panel_sort = crate::config::AgentPanelSortConfig::Priority;
@@ -489,6 +495,7 @@ mod tests {
         let diagnostics = shell.apply_live_config(&next, &[], &[]);
 
         assert!(diagnostics.is_empty());
+        assert_eq!(shell.local_label, "ceres");
         assert_eq!(shell.sidebar_width, 31);
         assert_eq!(shell.tab_bar_position, TabBarPositionConfig::Bottom);
         assert_eq!(
@@ -547,16 +554,19 @@ mod tests {
     #[test]
     fn live_reload_preserves_invalid_client_owned_sections() {
         let mut initial = Config::default();
+        initial.ui.local_label = Some("ceres".into());
         initial.ui.sidebar_width = 29;
         initial.keys.prefix = crate::config::BindingConfig::one("ctrl+x");
         let mut shell = ClientShellConfig::from_config(&initial);
 
         let mut invalid = Config::default();
+        invalid.ui.local_label = Some("other".into());
         invalid.ui.sidebar_width = 35;
         invalid.keys.prefix = crate::config::BindingConfig::one("ctrl+a");
         let invalid_sections = vec!["ui".to_owned(), "keys".to_owned()];
         shell.apply_live_config(&invalid, &[], &invalid_sections);
 
+        assert_eq!(shell.local_label, "ceres");
         assert_eq!(shell.sidebar_width, 29);
         assert_eq!(
             shell.keybinds.prefix,

@@ -518,7 +518,7 @@ pub(super) fn render_expanded(
 
     let footer_y = workspace_area.bottom().saturating_sub(1);
     if config.mouse_capture {
-        let label = format!(" new · {}", active_endpoint_label(state));
+        let label = format!(" new · {}", active_endpoint_label(state, config));
         hits.new_workspace = Rect::new(
             workspace_area.x,
             footer_y,
@@ -579,12 +579,17 @@ pub(super) fn render_expanded(
     );
 }
 
-fn active_endpoint_label<'a>(state: &'a ShellRenderState<'_>) -> &'a str {
+fn active_endpoint_label<'a>(
+    state: &'a ShellRenderState<'_>,
+    config: &'a ClientShellConfig,
+) -> &'a str {
     state
         .endpoints
         .iter()
         .find(|endpoint| &endpoint.endpoint_id == state.active_endpoint_id)
-        .map_or("Local", |endpoint| endpoint.label.as_str())
+        .map_or(config.local_label.as_str(), |endpoint| {
+            endpoint.label.as_str()
+        })
 }
 
 fn render_endpoint_row(
