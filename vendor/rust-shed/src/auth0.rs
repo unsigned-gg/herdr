@@ -51,9 +51,9 @@ pub enum Auth0Error {
 /// Configuration for the Auth0 SSO Adapter.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Auth0Config {
-    /// Domain of the Auth0 tenant (e.g. "unsigned.us.auth0.com" or "auth.todie.io")
+    /// Domain of the Auth0 tenant (e.g. "example.us.auth0.com" or "auth.example.com")
     pub domain: String,
-    /// Expected audience list (e.g. ["https://vespertin.crdnl.io/v1", "estate-api"])
+    /// Expected audience list (e.g. ["https://api.example.com/v1", "service-api"])
     pub audiences: Vec<String>,
     /// Expected issuer (defaults to https://{domain}/ if not set)
     pub issuer: Option<String>,
@@ -408,8 +408,8 @@ mod tests {
 
     fn dummy_config() -> Auth0Config {
         Auth0Config::new(
-            "cerebral.us.auth0.com",
-            vec!["https://vespertin.crdnl.io/v1".to_string()],
+            "example.us.auth0.com",
+            vec!["https://api.example.com/v1".to_string()],
         )
     }
 
@@ -437,26 +437,26 @@ mod tests {
         let now = Utc::now().timestamp();
 
         let claims = Auth0Claims {
-            sub: "auth0|marc.goudet".to_string(),
-            iss: "https://cerebral.us.auth0.com/".to_string(),
-            aud: vec!["https://vespertin.crdnl.io/v1".to_string()],
+            sub: "auth0|user-123".to_string(),
+            iss: "https://example.us.auth0.com/".to_string(),
+            aud: vec!["https://api.example.com/v1".to_string()],
             exp: now + 3600,
             iat: now - 10,
-            email: Some("marc@crdnl.io".to_string()),
-            permissions: vec!["read:vespertin-docs".to_string()],
+            email: Some("alice@example.com".to_string()),
+            permissions: vec!["read:docs".to_string()],
             estate_roles: vec!["architect".to_string()],
-            scope: Some("openid profile email read:vespertin-docs".to_string()),
+            scope: Some("openid profile email read:docs".to_string()),
         };
 
         assert!(validator.verify_claims_semantics(&claims).is_ok());
         assert!(
             validator
-                .enforce_permission(&claims, "read:vespertin-docs")
+                .enforce_permission(&claims, "read:docs")
                 .is_ok()
         );
         assert!(
             validator
-                .enforce_permission(&claims, "write:vespertin-docs")
+                .enforce_permission(&claims, "write:docs")
                 .is_err()
         );
     }
@@ -467,9 +467,9 @@ mod tests {
         let now = Utc::now().timestamp();
 
         let claims = Auth0Claims {
-            sub: "auth0|marc.goudet".to_string(),
-            iss: "https://cerebral.us.auth0.com/".to_string(),
-            aud: vec!["https://vespertin.crdnl.io/v1".to_string()],
+            sub: "auth0|user-123".to_string(),
+            iss: "https://example.us.auth0.com/".to_string(),
+            aud: vec!["https://api.example.com/v1".to_string()],
             exp: now - 300, // Expired beyond 60s leeway
             iat: now - 1000,
             email: None,
@@ -490,9 +490,9 @@ mod tests {
         let now = Utc::now().timestamp();
 
         let claims = Auth0Claims {
-            sub: "auth0|marc.goudet".to_string(),
-            iss: "https://cerebral.us.auth0.com/".to_string(),
-            aud: vec!["https://unrelated-service.local".to_string()],
+            sub: "auth0|user-123".to_string(),
+            iss: "https://example.us.auth0.com/".to_string(),
+            aud: vec!["https://unrelated-service.example".to_string()],
             exp: now + 3600,
             iat: now - 10,
             email: None,
