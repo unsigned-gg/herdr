@@ -48,7 +48,8 @@ concurrency:
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    runs-on: {group: ent-cygnus, labels: [cygnus]}  # hardened Kata ARC fleet
+    container: harbor.unsigned.gg/platform/ci-rust-runner:v0.1.14@sha256:d73d3748c0f22e7386109d12b01ccdf7282b0f529aab2c629b4e5ed558d42bc1
     timeout-minutes: 10
     steps:
       - name: Checkout
@@ -56,6 +57,11 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
       - name: Install Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
