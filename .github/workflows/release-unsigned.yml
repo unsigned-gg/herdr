@@ -139,7 +139,7 @@ jobs:
 
   release:
     needs: [build]
-    runs-on: ubuntu-24.04  # explicit label: org runner-group override of ubuntu-latest never acquires on this fork
+    runs-on: {group: ent-default, labels: [self-hosted]}  # estate runner fleet (SOP: ci-runner-always-internal)
     permissions:
       contents: write
     steps:

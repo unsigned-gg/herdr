@@ -24,6 +24,7 @@ concurrency:
 jobs:
   installer:
     name: installer
+    if: github.event_name != 'pull_request'
     runs-on: windows-11-arm
     timeout-minutes: 10
     steps:

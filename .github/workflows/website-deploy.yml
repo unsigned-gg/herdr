@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   trigger:
-    runs-on: ubuntu-latest
+    runs-on: {group: ent-default, labels: [self-hosted]}  # estate runner fleet (SOP: ci-runner-always-internal)
     timeout-minutes: 5
     steps:
       - name: Trigger Cloudflare Pages build
